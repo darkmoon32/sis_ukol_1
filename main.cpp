@@ -1,6 +1,11 @@
 #include <math.h>
 #include <stdio.h>
 #include <vector>
+#include <iostream>
+#include <fstream>
+#include <string>
+
+using namespace std;
 
 double evalFunction(double num)
 {
@@ -81,13 +86,13 @@ double secondDerivFourPoint(double h, double arg){
     return (1 / pow(h, 2)) * (2 * evalFunction(arg) - 5 * evalFunction(arg + h) + 4 * evalFunction(arg + 2 * h) - evalFunction(arg + 3 * h));
 }
 
-std::vector<double> * richardson(double h, double arg)
+std::vector<double> * richardson(double h, double arg, double (*pFunc)(double, double))
 {
     std::vector<double> *results = new std::vector<double>(6);
 
-    results->at(0) = firstDerivFourPoint(h, arg);      // d00
-    results->at(1) = firstDerivFourPoint(h / 2, arg);  // d01
-    results->at(3) = firstDerivFourPoint(h / 4, arg);  // d02
+    results->at(0) = pFunc(h, arg);      // d00
+    results->at(1) = pFunc(h / 2, arg);  // d01
+    results->at(3) = pFunc(h / 4, arg);  // d02
 
     results->at(2) = (1 / (pow(4, 1) - 1)) * (pow(4, 1) * results->at(1) - results->at(0)); // d10
     results->at(4) = (1 / (pow(4, 1) - 1)) * (pow(4, 1) * results->at(3) - results->at(1)); // d11
@@ -98,45 +103,48 @@ std::vector<double> * richardson(double h, double arg)
 
 int main(int argc, char *argv[])
 {
+    ofstream myfile("output.csv");
+    if(myfile){
+        myfile.close();
+        remove("output.csv");
+    }
+    myfile.open("output.csv");
+
     //3.73532
     std::vector<double> *rombergResult;
-    printf("Interval     Obdelnik  Lichobeznik      Simpson Analaticky\n");
+    myfile << "Interval;Obdelnik;Lichobeznik;Simpson;Analaticky\n";
     for(int i = 0 ; i < 20 ; i++)
     {
-        printf("%lf %12lf %12lf %12lf    3.73532\n",
-               4 / pow(2 , i),
-               obdelnikove(4 / pow(2, i), -2, 2),
-               lichobeznikove(4 / pow(2, i), -2, 2),
-               simpsonova(4 / pow(2, i), -2, 2));
+        myfile << std::to_string(4 / pow(2 , i)) + ';' + to_string(obdelnikove(4 / pow(2, i), -2, 2)) + ';' +
+                  to_string(lichobeznikove(4 / pow(2, i), -2, 2)) + ';' + to_string(simpsonova(4 / pow(2, i), -2, 2)) + ';' + to_string(3.73532) + '\n';
     }
 
     rombergResult = romberg(-2, 2, 2);
-    //printf("Romberg: %lf\n", romberg(-2, 2, 2));
-    printf("\n       T Zpresneni k=1 Zpresneni k=2\n");
-    printf("%lf\n", rombergResult->at(0));
-    printf("%8lf %13lf\n", rombergResult->at(1), rombergResult->at(2));
-    printf("%8lf %13lf %13lf\n", rombergResult->at(3), rombergResult->at(4), rombergResult->at(5));
-    rombergResult->~vector();
+    myfile << "\nT;Zpresneni k=1;Zpresneni k=2\n";
+    myfile << to_string(rombergResult->at(0)) + '\n';
+    myfile << to_string(rombergResult->at(1)) + ';' + to_string(rombergResult->at(2)) + '\n';
+    myfile << to_string(rombergResult->at(3)) + ';' + to_string(rombergResult->at(4)) + ';' + to_string(rombergResult->at(5)) + '\n';
 
-    printf("Interval         Dvou          Tri         Ctyr         Peti Analiticky |        Tri         Ctyr | Analiticky\n");
+    myfile << "Interval;Dvou;Tri;Ctyr;Peti;Analiticky;Tri;Ctyr;Analiticky\n";
     for(int i = 0 ; i < 20 ; i++){
-        printf("%lf %12lf %12lf %12lf %12lf    1.76777 %12lf %12lf     -1.94454\n",
-               4 / pow(2 , i),
-               firstDerivTwoPoint(4 / pow(2, i), -1),
-               firstDerivThreePoint(4 / pow(2, i), -1),
-               firstDerivFourPoint(4 / pow(2, i), -1),
-               firstDerivFivePoint(4 / pow(2, i), -1),
-               secondDerivThreePoint(4 / pow(2, i), -1),
-               secondDerivFourPoint(4 / pow(2, i), -1)
-               );
+        myfile << to_string(4 / pow(2 , i)) + ';' + to_string(firstDerivTwoPoint(4 / pow(2, i), -1)) + ';' + to_string(firstDerivThreePoint(4 / pow(2, i), -1)) + ';' +
+                  to_string(firstDerivFourPoint(4 / pow(2, i), -1)) + ';' + to_string(firstDerivFivePoint(4 / pow(2, i), -1)) + ';' + to_string(1.76777) + ';' +
+                  to_string(secondDerivThreePoint(4 / pow(2, i), -1)) + ';' + to_string(secondDerivFourPoint(4 / pow(2, i), -1)) + ';' + to_string(-1.94454) + '\n';
     }
 
-    rombergResult = richardson(0.25, -1);
-    printf("\n       T Zpresneni k=1 Zpresneni k=2\n");
-    printf("%lf\n", rombergResult->at(0));
-    printf("%8lf %13lf\n", rombergResult->at(1), rombergResult->at(2));
-    printf("%8lf %13lf %13lf\n", rombergResult->at(3), rombergResult->at(4), rombergResult->at(5));
+    rombergResult = richardson(0.25, -1, &firstDerivFourPoint);
+    myfile << "\nT;Zpresneni k=1;Zpresneni k=2\n";
+    myfile << to_string(rombergResult->at(0)) + '\n';
+    myfile << to_string(rombergResult->at(1)) + ';' + to_string(rombergResult->at(2)) + '\n';
+    myfile << to_string(rombergResult->at(3)) + ';' + to_string(rombergResult->at(4)) + ';' + to_string(rombergResult->at(5)) + '\n';
+
+    rombergResult = richardson(0.25, -1, &secondDerivFourPoint);
+    myfile << "\nT;Zpresneni k=1;Zpresneni k=2\n";
+    myfile << to_string(rombergResult->at(0)) + '\n';
+    myfile << to_string(rombergResult->at(1)) + ';' + to_string(rombergResult->at(2)) + '\n';
+    myfile << to_string(rombergResult->at(3)) + ';' + to_string(rombergResult->at(4)) + ';' + to_string(rombergResult->at(5)) + '\n';
     rombergResult->~vector();
 
+    myfile.close();
     return 0;
 }
